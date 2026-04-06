@@ -1,0 +1,59 @@
+{
+  "name": "inreelforge",
+  "version": "1.0.0",
+  "description": "Official Node.js SDK for InReelForge — Social Media API to upload videos, photos & text to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit & Bluesky with one API call.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "social-media-api",
+    "instagram-api",
+    "youtube-api",
+    "tiktok-api",
+    "facebook-api",
+    "twitter-api",
+    "linkedin-api",
+    "threads-api",
+    "pinterest-api",
+    "reddit-api",
+    "bluesky-api",
+    "social-media-posting",
+    "video-upload",
+    "multi-platform",
+    "content-distribution",
+    "social-media-automation",
+    "social-media-scheduling",
+    "inreelforge",
+    "upload-api"
+  ],
+  "author": "InReelForge <support@indreelforge.com>",
+  "license": "MIT",
+  "homepage": "https://indreelforge.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Indreelforge/inreelforge-node"
+  },
+  "bugs": {
+    "url": "https://github.com/Indreelforge/inreelforge-node/issues"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}
