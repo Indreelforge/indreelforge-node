@@ -1,6 +1,6 @@
 # InReelForge — Node.js SDK
 
-[![npm version](https://img.shields.io/npm/v/inreelforge.svg)](https://www.npmjs.com/package/inreelforge)
+[![npm version](https://img.shields.io/npm/v/indreelforge.svg)](https://www.npmjs.com/package/indreelforge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Official Node.js SDK for the [InReelForge](https://indreelforge.com) Social Media API. Upload videos, photos, and text to **Instagram, YouTube, TikTok, Facebook, X (Twitter), LinkedIn, Threads, Pinterest, Reddit & Bluesky** with a single API call.
@@ -8,13 +8,13 @@ Official Node.js SDK for the [InReelForge](https://indreelforge.com) Social Medi
 ## Installation
 
 ```bash
-npm install inreelforge
+npm install indreelforge
 ```
 
 ## Quick Start
 
 ```typescript
-import InReelForge from 'inreelforge';
+import InReelForge from 'indreelforge';
 
 const client = new InReelForge({
   apiKey: 'your-api-key-here',
@@ -144,7 +144,7 @@ try {
 - [Dashboard](https://indreelforge.com/dashboard)
 - [Pricing](https://indreelforge.com/pricing)
 - [Status](https://indreelforge.com/status)
-- [Python SDK](https://pypi.org/project/inreelforge/)
+- [Python SDK](https://pypi.org/project/indreelforge/)
 
 ## License
 

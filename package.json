@@ -47,10 +47,10 @@
   "homepage": "https://indreelforge.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Indreelforge/inreelforge-node"
+    "url": "https://github.com/Indreelforge/indreelforge-node"
   },
   "bugs": {
-    "url": "https://github.com/Indreelforge/inreelforge-node/issues"
+    "url": "https://github.com/Indreelforge/indreelforge-node/issues"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
