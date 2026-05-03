@@ -1,5 +1,5 @@
 {
-  "name": "inreelforge",
+  "name": "indreelforge",
   "version": "1.0.0",
   "description": "Official Node.js SDK for InReelForge — Social Media API to upload videos, photos & text to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit & Bluesky with one API call.",
   "main": "dist/index.js",
@@ -39,7 +39,7 @@
     "content-distribution",
     "social-media-automation",
     "social-media-scheduling",
-    "inreelforge",
+    "indreelforge",
     "upload-api"
   ],
   "author": "InReelForge <support@indreelforge.com>",
