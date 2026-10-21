@@ -26,6 +26,9 @@ import type {
   Plan,
   PlatformOptions,
   JsonObject,
+  CredentialPlatform,
+  PlatformCredentials,
+  ConnectCredentialsResponse,
 } from './types';
 
 export const DEFAULT_BASE_URL = 'https://api.indreelforge.com';
@@ -348,6 +351,33 @@ export class IndReelForge {
   async deleteProfile(name: string): Promise<{ message: string } & JsonObject> {
     requireArg(name, 'name');
     return this.request(`/api/profiles/${seg(name)}`, { method: 'DELETE' });
+  }
+
+  /**
+   * Connect a platform that uses credentials instead of OAuth (Discord, Telegram,
+   * Slack, Mastodon, WordPress). The server verifies them live before saving;
+   * connecting again replaces the stored credentials.
+   *
+   * Errors: 400 with `code` MISSING_FIELD / FIELD_TOO_LONG / INVALID_CREDENTIALS
+   * (`err.body.details.field` names the field), 404 unknown profile, 502 platform unreachable.
+   *
+   * @example
+   * await client.connectWithCredentials('my-brand', 'mastodon', {
+   *   instance_url: 'https://mastodon.social', access_token: '...',
+   * });
+   */
+  async connectWithCredentials<P extends CredentialPlatform | (string & {})>(
+    profile: string,
+    platform: P,
+    credentials: P extends CredentialPlatform ? PlatformCredentials[P] : Record<string, string>,
+  ): Promise<ConnectCredentialsResponse> {
+    requireArg(profile, 'profile');
+    requireArg(platform, 'platform');
+    if (!credentials || typeof credentials !== 'object') throw new TypeError('credentials is required');
+    return this.request(`/api/profiles/${seg(profile)}/connect/${seg(platform)}/credentials`, {
+      method: 'POST',
+      json: credentials,
+    });
   }
 
   // ── Scheduling ────────────────────────────────────────────────────────────

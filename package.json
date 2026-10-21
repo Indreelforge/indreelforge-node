@@ -1,7 +1,7 @@
 {
   "name": "indreelforge",
   "version": "1.1.0",
-  "description": "Official Node.js SDK and MCP bridge for IndReelForge — one API to publish videos, photos, text & documents to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit, Bluesky & Google Business Profile.",
+  "description": "Official Node.js SDK and MCP bridge for IndReelForge — one API to publish videos, photos, text & documents to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit, Bluesky, Google Business Profile, Discord, Telegram, Slack, Mastodon & WordPress.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -31,8 +31,9 @@
   },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
-    "test": "npm run build && node --test test/*.test.mjs",
-    "prepublishOnly": "npm test"
+    "test": "npm run typecheck && npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm test",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit --strict --skipLibCheck --moduleResolution bundler --module esnext --target es2020 test/types/credentials.ts"
   },
   "keywords": [
     "social-media-api",
@@ -62,7 +63,12 @@
     "ai-agents",
     "claude",
     "chatgpt",
-    "cursor"
+    "cursor",
+    "discord-api",
+    "telegram-api",
+    "slack-api",
+    "mastodon-api",
+    "wordpress-api"
   ],
   "author": "IndReelForge <support@indreelforge.com>",
   "license": "MIT",

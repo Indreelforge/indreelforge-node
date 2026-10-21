@@ -287,3 +287,62 @@ test('empty success bodies resolve to an empty object', async () => {
   const f = mockFetch({ status: 204 });
   assert.deepEqual(await client(f).deleteUpload('u1'), {});
 });
+
+test('platform constants include the credential platforms', async () => {
+  const { PLATFORMS, CREDENTIAL_PLATFORMS } = await import('../dist/index.mjs');
+  for (const p of ['discord', 'telegram', 'slack', 'mastodon', 'wordpress', 'google_business']) {
+    assert.ok(PLATFORMS.includes(p), p);
+  }
+  assert.deepEqual(CREDENTIAL_PLATFORMS, {
+    discord: ['webhook_url'],
+    telegram: ['bot_token', 'chat_id'],
+    slack: ['webhook_url'],
+    mastodon: ['instance_url', 'access_token'],
+    wordpress: ['site_url', 'username', 'app_password'],
+  });
+});
+
+test('connectWithCredentials posts the credential fields as JSON', async () => {
+  const f = mockFetch({ body: { success: true, message: 'Connected to Mastodon as @me', platform_username: '@me' } });
+  const res = await client(f).connectWithCredentials('my brand', 'mastodon', {
+    instance_url: 'https://mastodon.social',
+    access_token: 'tok',
+  });
+  assert.equal(res.platform_username, '@me');
+  const { url, init } = f.calls[0];
+  assert.equal(url, 'https://api.example.test/api/profiles/my%20brand/connect/mastodon/credentials');
+  assert.equal(init.method, 'POST');
+  assert.equal(init.headers['Content-Type'], 'application/json');
+  assert.deepEqual(JSON.parse(init.body), { instance_url: 'https://mastodon.social', access_token: 'tok' });
+});
+
+test('connectWithCredentials surfaces MISSING_FIELD / INVALID_CREDENTIALS / 404 / 502', async () => {
+  const cases = [
+    [{ status: 400, body: { error: 'Channel or chat is required.', code: 'MISSING_FIELD', field: 'chat_id', details: { field: 'chat_id' } } }, 400, 'MISSING_FIELD', 'chat_id'],
+    [{ status: 400, body: { error: 'Bot token is too long.', code: 'FIELD_TOO_LONG', field: 'bot_token', details: { field: 'bot_token' } } }, 400, 'FIELD_TOO_LONG', 'bot_token'],
+    [{ status: 400, body: { error: 'Telegram rejected the bot token.', code: 'INVALID_CREDENTIALS', error_code: 'INVALID_CREDENTIALS', details: { field: 'bot_token' } } }, 400, 'INVALID_CREDENTIALS', 'bot_token'],
+    [{ status: 404, body: { error: 'Profile not found' } }, 404, null, undefined],
+    [{ status: 502, body: { error: 'Could not reach Telegram to check these details. Please try again.' } }, 502, null, undefined],
+  ];
+  for (const [response, status, code, field] of cases) {
+    const f = mockFetch(response);
+    await assert.rejects(
+      client(f).connectWithCredentials('brand', 'telegram', { bot_token: 'b', chat_id: '@c' }),
+      (err) => {
+        assert.ok(err instanceof IndReelForgeError);
+        assert.equal(err.status, status);
+        assert.equal(err.code, code);
+        assert.equal(err.message, response.body.error);
+        assert.equal(err.body?.details?.field, field);
+        return true;
+      },
+    );
+  }
+});
+
+test('connectWithCredentials validates arguments', async () => {
+  const f = mockFetch({ body: {} });
+  await assert.rejects(client(f).connectWithCredentials('', 'slack', { webhook_url: 'u' }), /profile is required/);
+  await assert.rejects(client(f).connectWithCredentials('p', '', {}), /platform is required/);
+  assert.equal(f.calls.length, 0);
+});

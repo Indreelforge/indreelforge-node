@@ -28,8 +28,52 @@ export type Platform =
   | 'reddit'
   | 'bluesky'
   | 'google_business'
+  | 'discord'
+  | 'telegram'
+  | 'slack'
+  | 'mastodon'
+  | 'wordpress'
   // Any other platform key the API supports, while keeping autocomplete for the above.
   | (string & {});
+
+/** Every platform key known to this SDK version. */
+export const PLATFORMS = [
+  'instagram', 'youtube', 'tiktok', 'facebook', 'x', 'linkedin', 'threads', 'pinterest',
+  'reddit', 'bluesky', 'google_business', 'discord', 'telegram', 'slack', 'mastodon', 'wordpress',
+] as const;
+
+/** Credential fields for platforms that connect with credentials instead of OAuth. */
+export interface PlatformCredentials {
+  /** Channel webhook URL (Server Settings → Integrations → Webhooks). */
+  discord: { webhook_url: string };
+  /** Bot token from @BotFather; chat_id is a public channel `@username` or a numeric chat id. */
+  telegram: { bot_token: string; chat_id: string };
+  /** Incoming webhook URL. Slack can't verify it without posting, so a bad URL only fails on the first post. */
+  slack: { webhook_url: string };
+  /** Instance URL (e.g. https://mastodon.social) and an access token with write:statuses + write:media. */
+  mastodon: { instance_url: string; access_token: string };
+  /** Self-hosted site URL, a user who can publish, and an application password. */
+  wordpress: { site_url: string; username: string; app_password: string };
+}
+
+export type CredentialPlatform = keyof PlatformCredentials;
+
+/** Platforms connected via `connectWithCredentials()`, with their required fields. */
+export const CREDENTIAL_PLATFORMS: { readonly [P in CredentialPlatform]: ReadonlyArray<keyof PlatformCredentials[P]> } = {
+  discord: ['webhook_url'],
+  telegram: ['bot_token', 'chat_id'],
+  slack: ['webhook_url'],
+  mastodon: ['instance_url', 'access_token'],
+  wordpress: ['site_url', 'username', 'app_password'],
+};
+
+export interface ConnectCredentialsResponse {
+  success: boolean;
+  message: string;
+  /** Account / channel name the credentials resolved to. */
+  platform_username: string;
+  [key: string]: any;
+}
 
 /** Value accepted for a platform-specific form field. */
 export type PlatformOptionValue = string | number | boolean | string[] | Record<string, unknown> | null | undefined;
