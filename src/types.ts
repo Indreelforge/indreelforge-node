@@ -27,7 +27,9 @@ export type Platform =
   | 'pinterest'
   | 'reddit'
   | 'bluesky'
-  | 'google_business';
+  | 'google_business'
+  // Any other platform key the API supports, while keeping autocomplete for the above.
+  | (string & {});
 
 /** Value accepted for a platform-specific form field. */
 export type PlatformOptionValue = string | number | boolean | string[] | Record<string, unknown> | null | undefined;

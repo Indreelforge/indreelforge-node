@@ -51,8 +51,9 @@ writeFileSync(videoPath, Buffer.from('fake-video'));
 writeFileSync(photoPath, Buffer.from('fake-jpg'));
 writeFileSync(docPath, Buffer.from('%PDF-1.4'));
 
-test('exports and backward-compatible aliases exist', () => {
-  assert.equal(typeof VERSION, 'string');
+test('version matches package.json and exports/aliases exist', () => {
+  assert.equal(VERSION, pkg.version);
+  assert.equal(VERSION, '1.1.0');
   assert.equal(IndReelForgeDefault, IndReelForge);
   assert.equal(InReelForge, IndReelForge);
   assert.equal(InReelForgeError, IndReelForgeError);

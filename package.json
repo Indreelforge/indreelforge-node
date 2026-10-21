@@ -1,26 +1,38 @@
 {
   "name": "indreelforge",
-  "version": "1.0.0",
-  "description": "Official Node.js SDK for InReelForge \u2014 Social Media API to upload videos, photos & text to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit & Bluesky with one API call.",
+  "version": "1.1.0",
+  "description": "Official Node.js SDK and MCP bridge for IndReelForge — one API to publish videos, photos, text & documents to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit, Bluesky & Google Business Profile.",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs"
-    }
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "indreelforge": "dist/cli.js"
   },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "test": "npm run build && node --test test/*.test.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "social-media-api",
@@ -41,9 +53,18 @@
     "social-media-automation",
     "social-media-scheduling",
     "indreelforge",
-    "upload-api"
+    "upload-api",
+    "google-business",
+    "google-business-profile-api",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "ai-agents",
+    "claude",
+    "chatgpt",
+    "cursor"
   ],
-  "author": "InReelForge <support@indreelforge.com>",
+  "author": "IndReelForge <support@indreelforge.com>",
   "license": "MIT",
   "homepage": "https://indreelforge.com",
   "repository": {
@@ -57,11 +78,5 @@
     "@types/node": "^18.19.130",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
-  },
-  "bin": {
-    "indreelforge": "dist/cli.js"
-  },
-  "engines": {
-    "node": ">=18"
   }
 }
