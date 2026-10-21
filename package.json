@@ -1,7 +1,7 @@
 {
   "name": "indreelforge",
   "version": "1.0.0",
-  "description": "Official Node.js SDK for InReelForge — Social Media API to upload videos, photos & text to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit & Bluesky with one API call.",
+  "description": "Official Node.js SDK for InReelForge \u2014 Social Media API to upload videos, photos & text to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit & Bluesky with one API call.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.mjs",
@@ -18,7 +18,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "build": "tsup",
+    "test": "npm run build && node --test test/*.test.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
