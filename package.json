@@ -53,6 +53,7 @@
     "url": "https://github.com/Indreelforge/indreelforge-node/issues"
   },
   "devDependencies": {
+    "@types/node": "^18.19.130",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
   }
