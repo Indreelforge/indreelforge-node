@@ -18,7 +18,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsup",
     "test": "npm run build && node --test test/*.test.mjs",
     "prepublishOnly": "npm run build"
   },
@@ -57,5 +57,11 @@
     "@types/node": "^18.19.130",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0"
+  },
+  "bin": {
+    "indreelforge": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
