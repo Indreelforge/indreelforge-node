@@ -1,7 +1,7 @@
 {
-  "name": "indreelforge",
-  "version": "1.1.0",
-  "description": "Official Node.js SDK and MCP bridge for IndReelForge — one API to publish videos, photos, text & documents to Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit, Bluesky, Google Business Profile, Discord, Telegram, Slack, Mastodon & WordPress.",
+  "name": "post-upload",
+  "version": "1.2.0",
+  "description": "Official Node.js SDK and MCP bridge for Post-Upload — one API to publish videos, photos, text & documents to 22 platforms: Instagram, YouTube, TikTok, Facebook, X, LinkedIn, Threads, Pinterest, Reddit, Bluesky, Google Business Profile, Discord, Telegram, Slack, Mastodon, WordPress, Dev.to, Hashnode, Lemmy, Nostr, Whop & Listmonk. Chunked uploads for videos up to 500 MB.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -19,11 +19,13 @@
     "./package.json": "./package.json"
   },
   "bin": {
+    "post-upload": "dist/cli.js",
     "indreelforge": "dist/cli.js"
   },
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
@@ -53,7 +55,7 @@
     "content-distribution",
     "social-media-automation",
     "social-media-scheduling",
-    "indreelforge",
+    "post-upload",
     "upload-api",
     "google-business",
     "google-business-profile-api",
@@ -68,11 +70,19 @@
     "telegram-api",
     "slack-api",
     "mastodon-api",
-    "wordpress-api"
+    "wordpress-api",
+    "devto-api",
+    "hashnode-api",
+    "lemmy",
+    "nostr",
+    "whop",
+    "listmonk",
+    "chunked-upload",
+    "large-file-upload"
   ],
-  "author": "IndReelForge <support@indreelforge.com>",
+  "author": "Post-Upload <support@post-upload.com>",
   "license": "MIT",
-  "homepage": "https://indreelforge.com",
+  "homepage": "https://post-upload.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/Indreelforge/indreelforge-node"

@@ -5,12 +5,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 
-import IndReelForgeDefault, {
+import PostUploadDefault, {
+  PostUpload,
+  PostUploadError,
   IndReelForge,
   InReelForge,
   IndReelForgeError,
   InReelForgeError,
   VERSION,
+  DEFAULT_BASE_URL,
+  CHUNKED_THRESHOLD_BYTES,
 } from '../dist/index.mjs';
 
 const require = createRequire(import.meta.url);
@@ -34,7 +38,7 @@ function mockFetch(...responses) {
 }
 
 function client(fetch, extra = {}) {
-  return new IndReelForge({ apiKey: 'test-key', baseUrl: 'https://api.example.test/', fetch, ...extra });
+  return new PostUpload({ apiKey: 'test-key', baseUrl: 'https://api.example.test/', fetch, retryBaseDelayMs: 1, ...extra });
 }
 
 function formEntries(form) {
@@ -53,18 +57,39 @@ writeFileSync(docPath, Buffer.from('%PDF-1.4'));
 
 test('version matches package.json and exports/aliases exist', () => {
   assert.equal(VERSION, pkg.version);
-  assert.equal(VERSION, '1.1.0');
-  assert.equal(IndReelForgeDefault, IndReelForge);
-  assert.equal(InReelForge, IndReelForge);
-  assert.equal(InReelForgeError, IndReelForgeError);
+  assert.equal(VERSION, '1.2.0');
+  assert.equal(pkg.name, 'post-upload');
+  assert.equal(pkg.bin['post-upload'], 'dist/cli.js');
+  assert.equal(pkg.bin.indreelforge, 'dist/cli.js');
+  assert.equal(PostUploadDefault, PostUpload);
+  // Deprecated aliases from the `indreelforge` package are the same class.
+  assert.equal(IndReelForge, PostUpload);
+  assert.equal(InReelForge, PostUpload);
+  assert.equal(IndReelForgeError, PostUploadError);
+  assert.equal(InReelForgeError, PostUploadError);
+  assert.equal(DEFAULT_BASE_URL, 'https://api.post-upload.com');
+  assert.equal(CHUNKED_THRESHOLD_BYTES, 95 * 1024 * 1024);
   const cjs = require('../dist/index.js');
-  assert.equal(typeof cjs.IndReelForge, 'function');
-  assert.equal(cjs.InReelForge, cjs.IndReelForge);
-  assert.equal(cjs.default, cjs.IndReelForge);
+  assert.equal(typeof cjs.PostUpload, 'function');
+  assert.equal(cjs.IndReelForge, cjs.PostUpload);
+  assert.equal(cjs.InReelForge, cjs.PostUpload);
+  assert.equal(cjs.IndReelForgeError, cjs.PostUploadError);
+  assert.equal(cjs.default, cjs.PostUpload);
 });
 
-test('constructor requires an API key', () => {
-  assert.throws(() => new IndReelForge({ apiKey: '' }), /API key is required/);
+test('constructor requires an API key and accepts a bare key string', async () => {
+  assert.throws(() => new PostUpload({ apiKey: '' }), /API key is required/);
+  assert.throws(() => new PostUpload(''), /API key is required/);
+  const f = mockFetch({ body: {} });
+  await new PostUpload('k2', { baseUrl: 'https://api.example.test', fetch: f }).getMe();
+  assert.equal(f.calls[0].init.headers.Authorization, 'Apikey k2');
+  assert.equal(f.calls[0].url, 'https://api.example.test/api/me');
+  // The old class name still constructs a working client.
+  const g = mockFetch({ body: {} });
+  const old = new IndReelForge({ apiKey: 'k3', fetch: g });
+  assert.ok(old instanceof PostUpload);
+  await old.getMe();
+  assert.equal(g.calls[0].url, 'https://api.post-upload.com/api/me');
 });
 
 test('sends auth, user agent and strips trailing slash from baseUrl', async () => {
@@ -75,7 +100,7 @@ test('sends auth, user agent and strips trailing slash from baseUrl', async () =
   assert.equal(url, 'https://api.example.test/api/me');
   assert.equal(init.method, 'GET');
   assert.equal(init.headers.Authorization, 'Apikey test-key');
-  assert.equal(init.headers['User-Agent'], `indreelforge-node/${VERSION}`);
+  assert.equal(init.headers['User-Agent'], `post-upload-node/${VERSION}`);
 });
 
 test('uploadVideo (file) builds multipart form with all options', async () => {
@@ -144,7 +169,7 @@ test('uploadVideo (URL) sends the URL string in the video field', async () => {
 
 test('uploadVideo validates input before any request', async () => {
   const f = mockFetch({ body: {} });
-  await assert.rejects(client(f).uploadVideo({ user: 'u', platforms: ['x'] }), /videoPath` or `videoUrl/);
+  await assert.rejects(client(f).uploadVideo({ user: 'u', platforms: ['x'] }), /videoPath`, `video`, `videoUrl` or `stagedFileId/);
   assert.equal(f.calls.length, 0);
 });
 
@@ -257,7 +282,7 @@ test('API errors become IndReelForgeError with status, code and body', async () 
   await assert.rejects(client(f).getMe(), (err) => {
     assert.ok(err instanceof IndReelForgeError);
     assert.ok(err instanceof InReelForgeError);
-    assert.equal(err.name, 'IndReelForgeError');
+    assert.equal(err.name, 'PostUploadError');
     assert.equal(err.message, 'Missing video');
     assert.equal(err.status, 400);
     assert.equal(err.code, 'MISSING_VIDEO');
@@ -290,15 +315,24 @@ test('empty success bodies resolve to an empty object', async () => {
 
 test('platform constants include the credential platforms', async () => {
   const { PLATFORMS, CREDENTIAL_PLATFORMS } = await import('../dist/index.mjs');
-  for (const p of ['discord', 'telegram', 'slack', 'mastodon', 'wordpress', 'google_business']) {
+  for (const p of ['discord', 'telegram', 'slack', 'mastodon', 'wordpress', 'google_business',
+    'devto', 'hashnode', 'lemmy', 'nostr', 'whop', 'listmonk']) {
     assert.ok(PLATFORMS.includes(p), p);
   }
+  assert.equal(PLATFORMS.length, 22);
+  assert.equal(new Set(PLATFORMS).size, 22);
   assert.deepEqual(CREDENTIAL_PLATFORMS, {
     discord: ['webhook_url'],
     telegram: ['bot_token', 'chat_id'],
     slack: ['webhook_url'],
     mastodon: ['instance_url', 'access_token'],
     wordpress: ['site_url', 'username', 'app_password'],
+    devto: ['api_key'],
+    hashnode: ['access_token', 'publication_id'],
+    lemmy: ['instance_url', 'username', 'password', 'community'],
+    nostr: ['nsec'],
+    whop: ['api_key'],
+    listmonk: ['base_url', 'api_user', 'api_token', 'list_ids'],
   });
 });
 

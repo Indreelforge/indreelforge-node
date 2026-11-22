@@ -9,7 +9,7 @@ export default defineConfig([
     target: 'node18',
   },
   {
-    // `npx indreelforge mcp` — CommonJS so it runs regardless of the caller's module type.
+    // `npx post-upload mcp` — CommonJS so it runs regardless of the caller's module type.
     entry: { cli: 'src/cli.ts' },
     format: ['cjs'],
     dts: false,

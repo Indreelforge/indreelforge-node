@@ -1,9 +1,9 @@
-// Public types for the IndReelForge REST API.
+// Public types for the Post-Upload REST API.
 
-export interface IndReelForgeConfig {
-  /** Your IndReelForge API key (Dashboard → API Keys). */
+export interface PostUploadConfig {
+  /** Your Post-Upload API key (Dashboard → API Keys). */
   apiKey: string;
-  /** API base URL. Default: https://api.indreelforge.com */
+  /** API base URL. Default: https://api.post-upload.com */
   baseUrl?: string;
   /** Request timeout in milliseconds. Default: 120000 (120 s). */
   timeout?: number;
@@ -11,10 +11,14 @@ export interface IndReelForgeConfig {
   fetch?: typeof fetch;
   /** Extra headers sent with every request. */
   headers?: Record<string, string>;
+  /** First retry delay (ms) for chunked-upload steps; doubles per attempt unless the server sends Retry-After. Default 1000. */
+  retryBaseDelayMs?: number;
 }
 
-/** @deprecated Use {@link IndReelForgeConfig}. */
-export type InReelForgeConfig = IndReelForgeConfig;
+/** @deprecated Use {@link PostUploadConfig}. */
+export type IndReelForgeConfig = PostUploadConfig;
+/** @deprecated Use {@link PostUploadConfig}. */
+export type InReelForgeConfig = PostUploadConfig;
 
 export type Platform =
   | 'instagram'
@@ -33,6 +37,12 @@ export type Platform =
   | 'slack'
   | 'mastodon'
   | 'wordpress'
+  | 'devto'
+  | 'hashnode'
+  | 'lemmy'
+  | 'nostr'
+  | 'whop'
+  | 'listmonk'
   // Any other platform key the API supports, while keeping autocomplete for the above.
   | (string & {});
 
@@ -40,6 +50,7 @@ export type Platform =
 export const PLATFORMS = [
   'instagram', 'youtube', 'tiktok', 'facebook', 'x', 'linkedin', 'threads', 'pinterest',
   'reddit', 'bluesky', 'google_business', 'discord', 'telegram', 'slack', 'mastodon', 'wordpress',
+  'devto', 'hashnode', 'lemmy', 'nostr', 'whop', 'listmonk',
 ] as const;
 
 /** Credential fields for platforms that connect with credentials instead of OAuth. */
@@ -54,6 +65,18 @@ export interface PlatformCredentials {
   mastodon: { instance_url: string; access_token: string };
   /** Self-hosted site URL, a user who can publish, and an application password. */
   wordpress: { site_url: string; username: string; app_password: string };
+  /** DEV / Forem API key; `base_url` only for a Forem site other than dev.to. */
+  devto: { api_key: string; base_url?: string };
+  /** Personal access token and the publication ID (Hashnode Pro publications only). */
+  hashnode: { access_token: string; publication_id: string };
+  /** Instance, account and community (`name` or `name@instance`); `totp` only if 2FA is on (used once, not stored). */
+  lemmy: { instance_url: string; username: string; password: string; community: string; totp?: string };
+  /** Private key (`nsec1…` or 64-char hex); optional comma-separated wss:// relays and a Blossom media server. */
+  nostr: { nsec: string; relays?: string; blossom_server?: string };
+  /** API key plus either a forum `experience_id` (exp_…) or a chat `channel_id` (not both). */
+  whop: { api_key: string; experience_id?: string; channel_id?: string };
+  /** Listmonk URL, an API user + token, and the numeric list IDs (comma-separated) each campaign is sent to. */
+  listmonk: { base_url: string; api_user: string; api_token: string; list_ids: string };
 }
 
 export type CredentialPlatform = keyof PlatformCredentials;
@@ -65,6 +88,12 @@ export const CREDENTIAL_PLATFORMS: { readonly [P in CredentialPlatform]: Readonl
   slack: ['webhook_url'],
   mastodon: ['instance_url', 'access_token'],
   wordpress: ['site_url', 'username', 'app_password'],
+  devto: ['api_key'],
+  hashnode: ['access_token', 'publication_id'],
+  lemmy: ['instance_url', 'username', 'password', 'community'],
+  nostr: ['nsec'],
+  whop: ['api_key'],
+  listmonk: ['base_url', 'api_user', 'api_token', 'list_ids'],
 };
 
 export interface ConnectCredentialsResponse {
@@ -123,11 +152,104 @@ export interface UploadOptions {
   youtubePrivacy?: 'public' | 'private' | 'unlisted';
 }
 
+/** Progress of a chunked upload, reported after each part. */
+export interface UploadProgress {
+  /** Bytes confirmed by the server so far. */
+  uploadedBytes: number;
+  /** Total file size in bytes. */
+  totalBytes: number;
+  /** Number of parts uploaded so far (1-based count). */
+  part: number;
+  /** Total number of parts. */
+  totalParts: number;
+}
+
+/** What can be sent as a video: a local path, a Buffer / Uint8Array, or a readable stream. */
+export type VideoSource = string | Uint8Array | NodeJS.ReadableStream | AsyncIterable<Uint8Array>;
+
+export interface ChunkedUploadOptions {
+  /** File name sent to the server (its extension decides the type). Default: the path's basename, or "video.mp4". */
+  filename?: string;
+  /** MIME type. Default: guessed from the file name (video/mp4 when unknown). */
+  mimeType?: string;
+  /** Size in bytes. Required for streams; read from disk / the buffer otherwise. */
+  size?: number;
+  /** Called after each part is uploaded. */
+  onProgress?: (progress: UploadProgress) => void;
+  /** Attempts per part (and per init/complete call) on 429 / 5xx / network errors. Default 5. */
+  maxRetries?: number;
+}
+
 export interface UploadVideoOptions extends UploadOptions {
   /** Path to a local video file. */
   videoPath?: string;
-  /** Public http(s) URL of a video; the server downloads it. */
+  /** Video bytes (Buffer / Uint8Array) or a readable stream (requires `size` for chunked uploads). */
+  video?: Uint8Array | NodeJS.ReadableStream | AsyncIterable<Uint8Array>;
+  /** Public http(s) URL of a video (up to 500 MB); the server downloads it. */
   videoUrl?: string;
+  /** A file already sent with the chunked upload endpoints (`uploadLargeFile` / `completeUploadSession`). */
+  stagedFileId?: string;
+  /**
+   * Send the file in parts through the chunked upload endpoints (up to 500 MB).
+   * Default `'auto'`: chunked when the file is larger than {@link CHUNKED_THRESHOLD_BYTES} (95 MiB),
+   * which is required above ~100 MB. `true` always, `false` never.
+   */
+  chunked?: boolean | 'auto';
+  /** File name for a Buffer / stream `video` (default "video.mp4"). */
+  filename?: string;
+  /** MIME type for the file (default: guessed from the name). */
+  mimeType?: string;
+  /** Size in bytes of a stream `video` (needed for a chunked upload of a stream). */
+  size?: number;
+  /** Progress of a chunked upload (called after each part). */
+  onProgress?: (progress: UploadProgress) => void;
+  /** Attempts per part on 429 / 5xx / network errors during a chunked upload. Default 5. */
+  maxRetries?: number;
+}
+
+/** Files above this size are sent with the chunked upload endpoints by default (Cloudflare caps a request at 100 MB). */
+export const CHUNKED_THRESHOLD_BYTES = 95 * 1024 * 1024;
+/** Largest video the API accepts (chunked upload or `videoUrl`). */
+export const MAX_VIDEO_BYTES = 500 * 1024 * 1024;
+
+export interface CreateUploadSessionOptions {
+  filename: string;
+  /** File size in bytes. */
+  size: number;
+  /** e.g. "video/mp4". */
+  mime_type?: string;
+}
+
+export interface UploadSession {
+  success?: boolean;
+  upload_session_id: string;
+  /** Every part except the last must be exactly this many bytes. */
+  chunk_size: number;
+  total_chunks: number;
+  expires_at: string;
+  [key: string]: any;
+}
+
+export interface UploadSessionStatus {
+  success?: boolean;
+  upload_session_id?: string;
+  status?: string;
+  /** Indexes already received (to resume). */
+  received_chunks?: number[];
+  total_chunks?: number;
+  chunk_size?: number;
+  staged_file_id?: string;
+  expires_at?: string;
+  [key: string]: any;
+}
+
+export interface CompleteUploadSessionResponse {
+  success?: boolean;
+  /** Pass to `uploadVideo({ stagedFileId })` / `POST /api/upload staged_file_id`. Usable once. */
+  staged_file_id: string;
+  expires_at?: string;
+  message?: string;
+  [key: string]: any;
 }
 
 export interface UploadPhotoOptions extends UploadOptions {
@@ -162,10 +284,24 @@ export interface UploadDocumentOptions {
 }
 
 export interface UploadWarning {
+  /** e.g. `upload_limit`, `ffmpeg_limit`, `platform_rate_limit`, `platform_skipped`. */
   type: string;
   level?: string;
   platform?: string;
+  error_code?: string;
   message: string;
+  [key: string]: any;
+}
+
+/** A platform the file was too large for: stored as failed, never sent, no quota used. */
+export interface SkippedPlatform {
+  platform: Platform;
+  /** `FILE_TOO_LARGE_FOR_PLATFORM`. */
+  error_code: string;
+  message: string;
+  file_size_mb?: number;
+  max_size_mb?: number;
+  [key: string]: any;
 }
 
 export interface UploadResponse {
@@ -181,8 +317,11 @@ export interface UploadResponse {
     platforms: Record<string, unknown> | string[];
     status?: string;
     platform_post_ids?: Record<string, string> | null;
+    /** With skipped platforms: JSON string `{"platform_errors": {…}}`. */
     error_message?: string | null;
     scheduled_date?: string;
+    /** Platforms the file was too large for (the others still publish). */
+    skipped_platforms?: SkippedPlatform[];
     [key: string]: any;
   };
   warnings?: UploadWarning[];

@@ -36,7 +36,7 @@ const json = (body, status = 200, headers = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
 
 test('default URL is the hosted endpoint', () => {
-  assert.equal(DEFAULT_MCP_URL, 'https://api.indreelforge.com/mcp');
+  assert.equal(DEFAULT_MCP_URL, 'https://api.post-upload.com/mcp');
 });
 
 test('forwards requests with the right headers and writes one line per response', async () => {
@@ -49,7 +49,7 @@ test('forwards requests with the right headers and writes one line per response'
   assert.equal(init.headers.Authorization, 'ApiKey k_test');
   assert.equal(init.headers['Content-Type'], 'application/json');
   assert.equal(init.headers.Accept, 'application/json, text/event-stream');
-  assert.equal(init.headers['User-Agent'], `indreelforge-node/${VERSION}`);
+  assert.equal(init.headers['User-Agent'], `post-upload-node/${VERSION}`);
   assert.deepEqual(r.calls[0].body, INIT);
   assert.deepEqual(r.lines, [{ jsonrpc: '2.0', id: 1, result }]);
   assert.equal(r.raw.split('\n').length, 2, 'exactly one line plus trailing newline');
@@ -118,7 +118,7 @@ test('HTTP 401 with {error} body becomes a JSON-RPC error for that id', async ()
   assert.equal(line.id, 'abc');
   assert.equal(line.error.code, -32000);
   assert.match(line.error.message, /HTTP 401: Invalid API key/);
-  assert.match(line.error.message, /INDREELFORGE_API_KEY/);
+  assert.match(line.error.message, /POST_UPLOAD_API_KEY/);
   assert.deepEqual(line.error.data, { httpStatus: 401, body: { error: 'Invalid API key' } });
   assert.ok(r.logs.some((l) => l.includes('HTTP 401')));
 });
@@ -147,7 +147,7 @@ test('network errors and timeouts become JSON-RPC errors; notifications stay sil
   assert.equal(r.lines.length, 1);
   assert.equal(r.lines[0].id, 6);
   assert.equal(r.lines[0].error.code, -32000);
-  assert.match(r.lines[0].error.message, /Could not reach IndReelForge MCP server.*ENOTFOUND/);
+  assert.match(r.lines[0].error.message, /Could not reach Post-Upload MCP server.*ENOTFOUND/);
 
   const slow = await bridge(
     [{ jsonrpc: '2.0', id: 8, method: 'ping' }],
@@ -205,17 +205,17 @@ test('cli --version / --help', async () => {
   assert.equal(v.stdout.trim(), VERSION);
   const h = await runCli(['--help']);
   assert.equal(h.code, 0);
-  assert.match(h.stdout, /indreelforge mcp/);
+  assert.match(h.stdout, /post-upload mcp/);
   const none = await runCli([]);
   assert.equal(none.code, 1);
   assert.equal(none.stdout, '');
 });
 
-test('cli mcp exits 1 with a stderr message when INDREELFORGE_API_KEY is missing', async () => {
+test('cli mcp exits 1 with a stderr message when POST_UPLOAD_API_KEY is missing', async () => {
   const r = await runCli(['mcp']);
   assert.equal(r.code, 1);
   assert.equal(r.stdout, '');
-  assert.match(r.stderr, /INDREELFORGE_API_KEY is not set/);
+  assert.match(r.stderr, /POST_UPLOAD_API_KEY is not set/);
 });
 
 test('cli mcp bridges stdin/stdout against a real HTTP server', async () => {
@@ -239,11 +239,11 @@ test('cli mcp bridges stdin/stdout against a real HTTP server', async () => {
   const url = `http://127.0.0.1:${server.address().port}/mcp`;
   try {
     const stdin = `${JSON.stringify(INIT)}\n${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n${JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' })}\n`;
-    const ok = await runCli(['mcp'], { env: { INDREELFORGE_API_KEY: 'good', INDREELFORGE_MCP_URL: url }, stdin });
+    const ok = await runCli(['mcp'], { env: { POST_UPLOAD_API_KEY: 'good', POST_UPLOAD_MCP_URL: url }, stdin });
     assert.equal(ok.code, 0);
     const lines = ok.stdout.trim().split('\n').map((l) => JSON.parse(l));
     assert.deepEqual(lines.map((l) => l.id), [1, 2]);
-    assert.equal(seen[0].headers['user-agent'], `indreelforge-node/${VERSION}`);
+    assert.equal(seen[0].headers['user-agent'], `post-upload-node/${VERSION}`);
     assert.equal(seen[2].headers['mcp-session-id'], 's-1');
     assert.match(ok.stderr, /MCP bridge v/);
 

@@ -1,8 +1,8 @@
 /**
- * stdio <-> Streamable HTTP bridge for the hosted IndReelForge MCP server.
+ * stdio <-> Streamable HTTP bridge for the hosted Post-Upload MCP server.
  *
  * MCP clients that only speak stdio (Claude Desktop, Cursor, ...) launch
- * `npx -y indreelforge mcp`; this module reads newline-delimited JSON-RPC
+ * `npx -y post-upload mcp`; this module reads newline-delimited JSON-RPC
  * messages from stdin, POSTs each one to the hosted server and writes every
  * JSON-RPC response back to stdout as exactly one line. Nothing but JSON-RPC
  * is ever written to stdout; diagnostics go to the `log` callback (stderr).
@@ -10,7 +10,7 @@
 import { createInterface } from 'readline';
 import { VERSION } from './version';
 
-export const DEFAULT_MCP_URL = 'https://api.indreelforge.com/mcp';
+export const DEFAULT_MCP_URL = 'https://api.post-upload.com/mcp';
 export const DEFAULT_MCP_TIMEOUT_MS = 300_000;
 
 /** JSON-RPC "server error" range code used for transport / HTTP failures. */
@@ -19,9 +19,9 @@ export const PARSE_ERROR_CODE = -32700;
 export const INTERNAL_ERROR_CODE = -32603;
 
 export interface McpBridgeOptions {
-  /** IndReelForge API key (sent as `Authorization: ApiKey <key>`). */
+  /** Post-Upload API key (sent as `Authorization: ApiKey <key>`). */
   apiKey: string;
-  /** MCP endpoint. Default: https://api.indreelforge.com/mcp */
+  /** MCP endpoint. Default: https://api.post-upload.com/mcp */
   url?: string;
   /** Source of newline-delimited JSON-RPC (default: process.stdin). */
   input?: NodeJS.ReadableStream;
@@ -93,9 +93,9 @@ function describeHttpError(status: number, statusText: string, body: unknown, te
   }
   if (!detail && text.trim()) detail = text.trim().replace(/\s+/g, ' ').slice(0, 200);
   if (!detail) detail = statusText || 'request failed';
-  let msg = `IndReelForge MCP server returned HTTP ${status}: ${detail}`;
+  let msg = `Post-Upload MCP server returned HTTP ${status}: ${detail}`;
   if (status === 401 || status === 403) {
-    msg += ' (check that INDREELFORGE_API_KEY is a valid IndReelForge API key)';
+    msg += ' (check that POST_UPLOAD_API_KEY is a valid Post-Upload API key)';
   }
   return msg;
 }
@@ -116,7 +116,7 @@ export async function forwardLine(
   try {
     msg = JSON.parse(trimmed);
   } catch (err) {
-    opts.log(`[indreelforge] ignoring invalid JSON on stdin: ${(err as Error).message}`);
+    opts.log(`[post-upload] ignoring invalid JSON on stdin: ${(err as Error).message}`);
     return [rpcError(null, PARSE_ERROR_CODE, 'Parse error: invalid JSON received on stdin')];
   }
 
@@ -127,7 +127,7 @@ export async function forwardLine(
 
   /** Turn a transport failure into a JSON-RPC error for every request id. */
   const failAll = (code: number, message: string, data?: unknown): unknown[] => {
-    opts.log(`[indreelforge] ${message}`);
+    opts.log(`[post-upload] ${message}`);
     if (!ids.length) return [];
     const errors = ids.map((id) => rpcError(id, code, message, data));
     return isBatch ? [errors] : errors;
@@ -137,7 +137,7 @@ export async function forwardLine(
     Authorization: `ApiKey ${opts.apiKey}`,
     'Content-Type': 'application/json',
     Accept: 'application/json, text/event-stream',
-    'User-Agent': `indreelforge-node/${VERSION}`,
+    'User-Agent': `post-upload-node/${VERSION}`,
   };
   if (state.sessionId) headers['Mcp-Session-Id'] = state.sessionId;
   if (state.protocolVersion && !isInitialize) headers['MCP-Protocol-Version'] = state.protocolVersion;
@@ -152,11 +152,11 @@ export async function forwardLine(
   } catch (err) {
     const e = err as Error;
     if (e?.name === 'AbortError') {
-      return failAll(TRANSPORT_ERROR_CODE, `Request to IndReelForge MCP server timed out after ${Math.round(opts.timeoutMs / 1000)}s`);
+      return failAll(TRANSPORT_ERROR_CODE, `Request to Post-Upload MCP server timed out after ${Math.round(opts.timeoutMs / 1000)}s`);
     }
     const cause = (e as { cause?: { code?: string; message?: string } })?.cause;
     const reason = cause?.code || cause?.message || e?.message || String(err);
-    return failAll(TRANSPORT_ERROR_CODE, `Could not reach IndReelForge MCP server at ${opts.url}: ${reason}`);
+    return failAll(TRANSPORT_ERROR_CODE, `Could not reach Post-Upload MCP server at ${opts.url}: ${reason}`);
   } finally {
     clearTimeout(timer);
   }
@@ -181,12 +181,12 @@ export async function forwardLine(
 
   if (!res.ok) {
     if (res.status === 404 && state.sessionId) {
-      opts.log('[indreelforge] MCP session expired; the client must re-initialize');
+      opts.log('[post-upload] MCP session expired; the client must re-initialize');
       state.sessionId = null;
     }
     const rpc = payloads.filter((p) => isJsonRpcResponse(p) || (Array.isArray(p) && p.some(isJsonRpcResponse)));
     if (rpc.length) {
-      opts.log(`[indreelforge] HTTP ${res.status} with JSON-RPC error body (passed through)`);
+      opts.log(`[post-upload] HTTP ${res.status} with JSON-RPC error body (passed through)`);
       return rpc;
     }
     return failAll(
@@ -197,8 +197,8 @@ export async function forwardLine(
   }
 
   if (!payloads.length) {
-    if (undecodable) return failAll(INTERNAL_ERROR_CODE, 'IndReelForge MCP server returned a response that is not valid JSON');
-    return ids.length ? failAll(INTERNAL_ERROR_CODE, `IndReelForge MCP server returned an empty response (HTTP ${res.status})`) : [];
+    if (undecodable) return failAll(INTERNAL_ERROR_CODE, 'Post-Upload MCP server returned a response that is not valid JSON');
+    return ids.length ? failAll(INTERNAL_ERROR_CODE, `Post-Upload MCP server returned an empty response (HTTP ${res.status})`) : [];
   }
 
   if (isInitialize) {
@@ -243,7 +243,7 @@ export async function runMcpBridge(options: McpBridgeOptions): Promise<void> {
     try {
       for (const payload of await forwardLine(line, state, opts)) write(payload);
     } catch (err) {
-      log(`[indreelforge] unexpected bridge error: ${(err as Error)?.stack || String(err)}`);
+      log(`[post-upload] unexpected bridge error: ${(err as Error)?.stack || String(err)}`);
     }
   };
 
